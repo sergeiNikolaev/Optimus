@@ -24,6 +24,7 @@
 #include "UKFilterSimCorr.h"
 #include <iostream>
 #include <fstream>
+#include <Eigen/src/Core/IO.h>
 
 
 namespace sofa
@@ -41,6 +42,9 @@ UKFilterSimCorr<FilterType>::UKFilterSimCorr()
     : Inherit()
     , d_filename( initData(&d_filename, "filename", "output file name"))
     , outfile(NULL)
+    , d_filenameState( initData(&d_filenameState, "filenameState", "output file name"))
+    , d_filenameVar( initData(&d_filenameVar, "filenameVar", "output file name"))
+    , d_filenameInn( initData(&d_filenameInn, "filenameInn", "output file name"))
     , d_state( initData(&d_state, "state", "actual expected value of reduced state (parameters) estimated by the filter" ) )
     , d_variance( initData(&d_variance, "variance", "actual variance  of reduced state (parameters) estimated by the filter" ) )
     , d_covariance( initData(&d_covariance, "covariance", "actual co-variance  of reduced state (parameters) estimated by the filter" ) )
@@ -191,24 +195,31 @@ void UKFilterSimCorr<FilterType>::computeCorrection()
         helper::WriteAccessor<Data <helper::vector<FilterType> > > covar = d_covariance;
         helper::WriteAccessor<Data <helper::vector<FilterType> > > innov = d_innovation;
 
-        stat.resize(stateSize);
-        var.resize(stateSize);
-        size_t numCovariances = (stateSize*(stateSize-1))/2;
-        covar.resize(numCovariances);
-        innov.resize(observationSize);
+        //stat.resize(stateSize);
+        //var.resize(stateSize);
+        //size_t numCovariances = (stateSize*(stateSize-1))/2;
+        //covar.resize(numCovariances);
+        //innov.resize(observationSize);
 
-        size_t gli = 0;
-        for (size_t i = 0; i < stateSize; i++) {
-            stat[i] = stateExp[i];
-            var[i] = stateCovar(i,i);
-            for (size_t j = i+1; j < stateSize; j++) {
-                covar[gli++] = stateCovar(i,j);
-            }
-        }
-        for (size_t index = 0; index < observationSize; index++) {
-            innov[index] = innovation[index];
+        //size_t gli = 0;
+        //for (size_t i = 0; i < stateSize; i++) {
+        //    stat[i] = stateExp[i];
+        //    var[i] = stateCovar(i,i);
+        //    for (size_t j = i+1; j < stateSize; j++) {
+        //        covar[gli++] = stateCovar(i,j);
+        //    }
+        //}
+        //for (size_t index = 0; index < observationSize; index++) {
+        //    innov[index] = innovation[index];
+        //}
+
+        for (size_t i = 0; i < (size_t)stateCovar.rows(); i++) {
+            diagStateCov(i) = stateCovar(i,i);
         }
 
+        writeEstimationData(d_filenameState.getValue(), stateExp);
+        writeEstimationData(d_filenameVar.getValue(), diagStateCov);
+        writeEstimationData(d_filenameInn.getValue(), innovation);
     }
 }
 
@@ -254,6 +265,29 @@ void UKFilterSimCorr<FilterType>::init() {
 
     const std::string& filename = d_filename.getFullPath();
     outfile = new std::ofstream(filename.c_str());
+
+    this->saveParam = false;
+    if (!d_filenameState.getValue().empty()) {
+        std::ofstream paramFileState(d_filenameState.getValue().c_str());
+        if (paramFileState .is_open()) {
+            this->saveParam = true;
+            paramFileState.close();
+        }
+    }
+    if (!d_filenameVar.getValue().empty()) {
+        std::ofstream paramFile(d_filenameVar.getValue().c_str());
+        if (paramFile.is_open()) {
+            this->saveParam = true;
+            paramFile.close();
+        }
+    }
+    if (!d_filenameInn.getValue().empty()) {
+        std::ofstream paramFileInn(d_filenameInn.getValue().c_str());
+        if (paramFileInn .is_open()) {
+            this->saveParam = true;
+            paramFileInn.close();
+        }
+    }
 }
 
 template <class FilterType>
@@ -277,6 +311,11 @@ void UKFilterSimCorr<FilterType>::bwdInit() {
     stateExp = masterStateWrapper->getState();
     stateCovar = masterStateWrapper->getStateErrorVariance();
 
+    diagStateCov.resize(stateCovar.rows());
+    for (size_t i = 0; i < (size_t)stateCovar.rows(); i++) {
+        diagStateCov(i)=stateCovar(i,i);
+    }
+
     /// compute sigma points
     switch (this->m_sigmaTopology) {
     case STAR:
@@ -295,19 +334,19 @@ void UKFilterSimCorr<FilterType>::bwdInit() {
     helper::WriteAccessor<Data <helper::vector<FilterType> > > dvar = this->d_variance;
     helper::WriteAccessor<Data <helper::vector<FilterType> > > dcovar = this->d_covariance;
 
-    dstate.resize(stateSize);
-    dvar.resize(stateSize);
-    size_t numCovar = (stateSize*(stateSize-1))/2;
-    dcovar.resize(numCovar);
+    //dstate.resize(stateSize);
+    //dvar.resize(stateSize);
+    //size_t numCovar = (stateSize*(stateSize-1))/2;
+    //dcovar.resize(numCovar);
 
-    size_t gli = 0;
-    for (size_t i = 0; i < stateSize; i++) {
-        dstate[i] = stateExp(i);
-        dvar[i] = stateCovar(i);
-        for (size_t j = i+1; j < stateSize; j++) {
-            dcovar[gli++] = stateCovar(i,j);
-        }
-    }
+    //size_t gli = 0;
+    //for (size_t i = 0; i < stateSize; i++) {
+    //    dstate[i] = stateExp(i);
+    //    dvar[i] = stateCovar(i);
+    //    for (size_t j = i+1; j < stateSize; j++) {
+    //        dcovar[gli++] = stateCovar(i,j);
+    //    }
+    //}
 }
 
 template <class FilterType>
@@ -408,6 +447,19 @@ void UKFilterSimCorr<FilterType>::computeStarSigmaPoints(EMatrixX& sigmaMat) {
     //PRNS("vecAlphaVar: \n" << vecAlphaVar);
 }
 
+
+
+template <class FilterType>
+void UKFilterSimCorr<FilterType>::writeEstimationData(std::string filename, EVectorX& data){
+    if (this->saveParam) {
+        Eigen::IOFormat CommaInitFmt(Eigen::StreamPrecision, Eigen::DontAlignCols, " ", " ");
+        std::ofstream paramFile(filename.c_str(), std::ios::app);
+        if (paramFile.is_open()) {
+            paramFile << std::setprecision(15) << data.transpose().format(CommaInitFmt) << "\n";
+            paramFile.close();
+        }
+    }
+}
 
 
 } // stochastic

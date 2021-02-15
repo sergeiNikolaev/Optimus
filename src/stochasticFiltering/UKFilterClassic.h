@@ -41,8 +41,7 @@
 #include <iostream>
 #include <fstream>
 //#include <Accelerate/Accelerate.h>
-#include <fstream>
-#include <iostream>
+#include <iomanip>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -114,8 +113,8 @@ protected:
 
     sofa::core::objectmodel::DataFileName d_exportPrefix;
     std::string exportPrefix;
-    std::string filenameCov, filenameInn, filenameFinalState;
-    Data< std::string > d_filenameCov, d_filenameInn, d_filenameFinalState;
+    std::string filenameState, filenameVar, filenameInn;
+    Data< std::string > d_filenameState, d_filenameVar, d_filenameInn;
     bool saveParam;
     Type alpha, alphaVar;
     bool hasObs;
@@ -149,7 +148,7 @@ public:
     }*/
     void stabilizeMatrix(EMatrixX& _initial, EMatrixX& _stabilized);
     void pseudoInverse(EMatrixX& M, EMatrixX& pinvM );
-    void writeValidationPlot(std::string filename, EVectorX& state);
+    void writeEstimationData(std::string filename, EVectorX& data);
     void sqrtMat(EMatrixX& A, EMatrixX& sqrtA);
 
     virtual void computePerturbedStates();

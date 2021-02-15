@@ -43,6 +43,7 @@
 //#include <Accelerate/Accelerate.h>
 #include <fstream>
 #include <iostream>
+#include <iomanip>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -115,6 +116,11 @@ protected:
     EMatrixX matDv;
     EMatrixX matXi;
 
+    std::string filenameState, filenameVar, filenameInn;
+    Data< std::string > d_filenameState, d_filenameVar, d_filenameInn;
+    bool saveParam;
+    EVectorX diagStateCov;
+
     Type alpha, alphaVar;
 
     /// structures for parallel computing:
@@ -148,6 +154,8 @@ public:
 
     void init() override;
     void bwdInit() override;
+
+    void writeEstimationData(std::string filename, EVectorX& data);
 
     virtual void initializeStep(const core::ExecParams* _params, const size_t _step) override;
 

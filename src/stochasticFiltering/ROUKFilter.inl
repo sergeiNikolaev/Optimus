@@ -22,6 +22,7 @@
 #pragma once
 
 #include "ROUKFilter.h"
+#include <Eigen/src/Core/IO.h>
 
 namespace sofa
 {
@@ -62,6 +63,9 @@ ROUKFilter<FilterType>::ROUKFilter()
     : Inherit()
     , observationErrorVarianceType( initData(&observationErrorVarianceType, std::string("inverse"), "observationErrorVarianceType", "if set to inverse, work directly with the inverse of the matrix" ) )
     , useBlasToMultiply( initData(&useBlasToMultiply, true, "useBlasToMultiply", "use BLAS to multiply the dense matrices instead of Eigen" ) )
+    , d_filenameState( initData(&d_filenameState, "filenameState", "output file name"))
+    , d_filenameVar( initData(&d_filenameVar, "filenameVar", "output file name"))
+    , d_filenameInn( initData(&d_filenameInn, "filenameInn", "output file name"))
     , reducedState( initData(&reducedState, "reducedState", "actual expected value of reduced state (parameters) estimated by the filter" ) )
     , reducedVariance( initData(&reducedVariance, "reducedVariance", "actual variance  of reduced state (parameters) estimated by the filter" ) )
     , reducedCovariance( initData(&reducedCovariance, "reducedCovariance", "actual co-variance  of reduced state (parameters) estimated by the filter" ) )
@@ -476,36 +480,40 @@ void ROUKFilter<FilterType>::computeSimplexCorrection()
         helper::WriteAccessor<Data <helper::vector<FilterType> > > var = d_variance;
         helper::WriteAccessor<Data <helper::vector<FilterType> > > covar = d_covariance;
 
-        redState.resize(reducedStateSize);
-        redVar.resize(reducedStateSize);
+        //redState.resize(reducedStateSize);
+        //redVar.resize(reducedStateSize);
         size_t numCovariances = (reducedStateSize*(reducedStateSize-1))/2;
-        redCovar.resize(numCovariances);
-        innov.resize(observationSize);
-        mstate.resize(stateSize);
-        var.resize(stateSize);
+        //redCovar.resize(numCovariances);
+        //innov.resize(observationSize);
+        //mstate.resize(stateSize);
+        //var.resize(stateSize);
         numCovariances = (stateSize*(stateSize-1))/2;
-        covar.resize(numCovariances);
+        //covar.resize(numCovariances);
 
         size_t gli = 0;
-        for (size_t i = 0; i < reducedStateSize; i++) {
-            redState[i] = state[reducedStateIndex+i];
-            redVar[i] = reducedCovarianceMatrix(i,i);
-            for (size_t j = i+1; j < reducedStateSize; j++) {
-                redCovar[gli++] = reducedCovarianceMatrix(i,j);
-            }
+        //for (size_t i = 0; i < reducedStateSize; i++) {
+        //    redState[i] = state[reducedStateIndex+i];
+        //    redVar[i] = reducedCovarianceMatrix(i,i);
+        //    for (size_t j = i+1; j < reducedStateSize; j++) {
+        //        redCovar[gli++] = reducedCovarianceMatrix(i,j);
+        //    }
+        //}
+        //gli = 0;
+        //for (size_t i = 0; i < stateSize; i++) {
+        //    mstate[i] = state[i];
+        //    var[i] = covarianceMatrix(i,i);
+        //    for (size_t j = i+1; j < stateSize; j++) {
+        //        covar[gli++] = covarianceMatrix(i,j);
+        //    }
+        //}
+        //for (size_t index = 0; index < observationSize; index++) {
+        //    innov[index] = vecZ[index];
+        //}
+        //TOC( "=T= corr sx")
+
+        for (size_t i = 0; i < (size_t)reducedCovarianceMatrix.rows(); i++) {
+            diagStateCov(i) = reducedCovarianceMatrix(i,i);
         }
-        gli = 0;
-        for (size_t i = 0; i < stateSize; i++) {
-            mstate[i] = state[i];
-            var[i] = covarianceMatrix(i,i);
-            for (size_t j = i+1; j < stateSize; j++) {
-                covar[gli++] = covarianceMatrix(i,j);
-            }
-        }
-        for (size_t index = 0; index < observationSize; index++) {
-            innov[index] = vecZ[index];
-        }
-        TOC( "=T= corr sx")
 
         /*char fileName[100];
         sprintf(fileName, "outVar/parL_%03d.txt", this->stepNumber);
@@ -533,9 +541,14 @@ void ROUKFilter<FilterType>::computeSimplexCorrection()
 
         asumEVec("############# final state", state);
         std::cout << "Max = " << maxState << " min = " << minState << std::endl;*/
+
+        writeEstimationData(d_filenameState.getValue(), state);
+        writeEstimationData(d_filenameVar.getValue(), diagStateCov);
+        writeEstimationData(d_filenameInn.getValue(), vecZ);
     }
 
     sofa::helper::AdvancedTimer::stepEnd("ROUKFSimplexCorrection");
+
 }
 
 template <class FilterType>
@@ -698,24 +711,28 @@ void ROUKFilter<FilterType>::computeStarCorrection()
         helper::WriteAccessor<Data <helper::vector<FilterType> > > redCovar = reducedCovariance;
         helper::WriteAccessor<Data <helper::vector<FilterType> > > innov = d_reducedInnovation;
 
-        redState.resize(reducedStateSize);
-        redVar.resize(reducedStateSize);
-        size_t numCovariances = (reducedStateSize*(reducedStateSize-1))/2;
-        redCovar.resize(numCovariances);
-        innov.resize(observationSize);
+        //redState.resize(reducedStateSize);
+        //redVar.resize(reducedStateSize);
+        //size_t numCovariances = (reducedStateSize*(reducedStateSize-1))/2;
+        //redCovar.resize(numCovariances);
+        //innov.resize(observationSize);
 
-        size_t gli = 0;
-        for (size_t i = 0; i < reducedStateSize; i++) {
-            redState[i] = state[reducedStateIndex+i];
-            redVar[i] = reducedCovarianceMatrix(i,i);
-            for (size_t j = i+1; j < reducedStateSize; j++) {
-                redCovar[gli++] = reducedCovarianceMatrix(i,j);
-            }
+        //size_t gli = 0;
+        //for (size_t i = 0; i < reducedStateSize; i++) {
+        //    redState[i] = state[reducedStateIndex+i];
+        //    redVar[i] = reducedCovarianceMatrix(i,i);
+        //    for (size_t j = i+1; j < reducedStateSize; j++) {
+        //        redCovar[gli++] = reducedCovarianceMatrix(i,j);
+        //    }
+        //}
+        //for (size_t index = 0; index < observationSize; index++) {
+        //    innov[index] = vecZ[index];
+        //}
+        //TOC ("=T= corr st")
+
+        for (size_t i = 0; i < (size_t)reducedCovarianceMatrix.rows(); i++) {
+            diagStateCov(i) = reducedCovarianceMatrix(i,i);
         }
-        for (size_t index = 0; index < observationSize; index++) {
-            innov[index] = vecZ[index];
-        }
-        TOC ("=T= corr st")
 
         //char fileName[100];
         //sprintf(fileName, "outVar/parL_%03d.txt", this->stepNumber);
@@ -743,6 +760,10 @@ void ROUKFilter<FilterType>::computeStarCorrection()
 
         //asumEVec("############# final state", state);
         //std::cout << "Max = " << maxState << " min = " << minState << std::endl;
+
+        writeEstimationData(d_filenameState.getValue(), state);
+        writeEstimationData(d_filenameVar.getValue(), diagStateCov);
+        writeEstimationData(d_filenameInn.getValue(), vecZ);
     }
 
     sofa::helper::AdvancedTimer::stepEnd("ROUKFStarCorrection");
@@ -786,6 +807,29 @@ void ROUKFilter<FilterType>::init() {
         PRNS("found observation manager: " << observationManager->getName());
     } else
         PRNE("no observation manager found!");
+
+    this->saveParam = false;
+    if (!d_filenameState.getValue().empty()) {
+        std::ofstream paramFileState(d_filenameState.getValue().c_str());
+        if (paramFileState .is_open()) {
+            this->saveParam = true;
+            paramFileState.close();
+        }
+    }
+    if (!d_filenameVar.getValue().empty()) {
+        std::ofstream paramFile(d_filenameVar.getValue().c_str());
+        if (paramFile.is_open()) {
+            this->saveParam = true;
+            paramFile.close();
+        }
+    }
+    if (!d_filenameInn.getValue().empty()) {
+        std::ofstream paramFileInn(d_filenameInn.getValue().c_str());
+        if (paramFileInn .is_open()) {
+            this->saveParam = true;
+            paramFileInn.close();
+        }
+    }
 }
 
 template <class FilterType>
@@ -858,15 +902,6 @@ void ROUKFilter<FilterType>::bwdInit() {
 
     masterStateWrapper->writeState(double(0.0));
 
-
-    /// export initial stochastic state
-    helper::WriteAccessor<Data <helper::vector<FilterType> > > redState = reducedState;
-    helper::WriteAccessor<Data <helper::vector<FilterType> > > redVar = reducedVariance;
-    helper::WriteAccessor<Data <helper::vector<FilterType> > > redCovar = reducedCovariance;
-    helper::WriteAccessor<Data <helper::vector<FilterType> > > mstate = d_state;
-    helper::WriteAccessor<Data <helper::vector<FilterType> > > var = d_variance;
-    helper::WriteAccessor<Data <helper::vector<FilterType> > > covar = d_covariance;
-
     EVectorX state = masterStateWrapper->getState();
     EMatrixX errorVarProj = masterStateWrapper->getStateErrorVarianceProjector();
     //PRNS("errorVarProj: " << errorVarProj);
@@ -880,31 +915,44 @@ void ROUKFilter<FilterType>::bwdInit() {
     EMatrixX covarianceMatrix(stateSize, stateSize);
     covarianceMatrix = errorVarProj * matUinv * errorVarProj.transpose();
 
-    redState.resize(reducedStateSize);
-    redVar.resize(reducedStateSize);
-    size_t numCovariances = (reducedStateSize*(reducedStateSize-1))/2;
-    redCovar.resize(numCovariances);
-    mstate.resize(stateSize);
-    var.resize(stateSize);
-    numCovariances = (stateSize*(stateSize-1))/2;
-    covar.resize(numCovariances);
+    diagStateCov.resize(reducedCovarianceMatrix.rows());
+    for (size_t i = 0; i < (size_t)reducedCovarianceMatrix.rows(); i++) {
+        diagStateCov(i)=reducedCovarianceMatrix(i,i);
+    }
 
-    size_t gli = 0;
-    for (size_t i = 0; i < reducedStateSize; i++) {
-        redState[i] = state[reducedStateIndex+i];
-        redVar[i] = reducedCovarianceMatrix(i,i);
-        for (size_t j = i+1; j < reducedStateSize; j++) {
-            redCovar[gli++] = reducedCovarianceMatrix(i,j);
-        }
-    }
-    gli = 0;
-    for (size_t i = 0; i < stateSize; i++) {
-        mstate[i] = state[i];
-        var[i] = covarianceMatrix(i,i);
-        for (size_t j = i+1; j < stateSize; j++) {
-            covar[gli++] = covarianceMatrix(i,j);
-        }
-    }
+    /// export initial stochastic state
+    helper::WriteAccessor<Data <helper::vector<FilterType> > > redState = reducedState;
+    helper::WriteAccessor<Data <helper::vector<FilterType> > > redVar = reducedVariance;
+    helper::WriteAccessor<Data <helper::vector<FilterType> > > redCovar = reducedCovariance;
+    helper::WriteAccessor<Data <helper::vector<FilterType> > > mstate = d_state;
+    helper::WriteAccessor<Data <helper::vector<FilterType> > > var = d_variance;
+    helper::WriteAccessor<Data <helper::vector<FilterType> > > covar = d_covariance;
+
+    //redState.resize(reducedStateSize);
+    //redVar.resize(reducedStateSize);
+    size_t numCovariances = (reducedStateSize*(reducedStateSize-1))/2;
+    //redCovar.resize(numCovariances);
+    //mstate.resize(stateSize);
+    //var.resize(stateSize);
+    numCovariances = (stateSize*(stateSize-1))/2;
+    //covar.resize(numCovariances);
+
+    //size_t gli = 0;
+    //for (size_t i = 0; i < reducedStateSize; i++) {
+    //    redState[i] = state[reducedStateIndex+i];
+    //    redVar[i] = reducedCovarianceMatrix(i,i);
+    //    for (size_t j = i+1; j < reducedStateSize; j++) {
+    //        redCovar[gli++] = reducedCovarianceMatrix(i,j);
+    //    }
+    //}
+    //gli = 0;
+    //for (size_t i = 0; i < stateSize; i++) {
+    //    mstate[i] = state[i];
+    //    var[i] = covarianceMatrix(i,i);
+    //    for (size_t j = i+1; j < stateSize; j++) {
+    //        covar[gli++] = covarianceMatrix(i,j);
+    //    }
+    //}
 
 
     //std::cout << "SigmaWrapper: " << sigmaPoints2WrapperIDs << std::endl;
@@ -1022,6 +1070,19 @@ void ROUKFilter<FilterType>::computeStarSigmaPoints(EMatrixX& sigmaMat) {
     }
     //PRNS("sigmaMat: \n" << sigmaMat);
     //PRNS("vecAlphaVar: \n" << vecAlphaVar);
+}
+
+
+template <class FilterType>
+void ROUKFilter<FilterType>::writeEstimationData(std::string filename, EVectorX& data){
+    if (this->saveParam) {
+        Eigen::IOFormat CommaInitFmt(Eigen::StreamPrecision, Eigen::DontAlignCols, " ", " ");
+        std::ofstream paramFile(filename.c_str(), std::ios::app);
+        if (paramFile.is_open()) {
+            paramFile << std::setprecision(15) << data.transpose().format(CommaInitFmt) << "\n";
+            paramFile.close();
+        }
+    }
 }
 
 

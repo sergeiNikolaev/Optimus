@@ -41,8 +41,7 @@
 #include <iostream>
 #include <fstream>
 //#include <Accelerate/Accelerate.h>
-#include <fstream>
-#include <iostream>
+#include <iomanip>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -119,6 +118,10 @@ protected:
 
     sofa::core::objectmodel::DataFileName d_filename;
     std::ofstream* outfile;
+    std::string filenameState, filenameVar, filenameInn;
+    Data< std::string > d_filenameState, d_filenameVar, d_filenameInn;
+    bool saveParam;
+    EVectorX diagStateCov;
 
     Type alpha, alphaVar;
 
@@ -149,6 +152,8 @@ public:
     {
         return
     }*/
+
+    void writeEstimationData(std::string filename, EVectorX& data);
 
     virtual void computePrediction() override; // Compute perturbed state included in computeprediction
     virtual void computeCorrection() override;

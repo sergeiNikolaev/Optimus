@@ -24,6 +24,7 @@
 #include "UKFilterClassic.h"
 #include <iostream>
 #include <fstream>
+#include <Eigen/src/Core/IO.h>
 
 
 namespace sofa
@@ -40,9 +41,9 @@ template <class FilterType>
 UKFilterClassic<FilterType>::UKFilterClassic()
     : Inherit()
     , d_exportPrefix( initData(&d_exportPrefix, "exportPrefix", "prefix for storing various quantities into files"))
-    , d_filenameCov( initData(&d_filenameCov, "filenameCov", "output file name"))
+    , d_filenameState( initData(&d_filenameState, "filenameState", "output file name"))
+    , d_filenameVar( initData(&d_filenameVar, "filenameVar", "output file name"))
     , d_filenameInn( initData(&d_filenameInn, "filenameInn", "output file name"))
-    , d_filenameFinalState( initData(&d_filenameFinalState, "filenameFinalState", "output file name"))
     , d_state( initData(&d_state, "state", "actual expected value of reduced state (parameters) estimated by the filter" ) )
     , d_variance( initData(&d_variance, "variance", "actual variance  of reduced state (parameters) estimated by the filter" ) )
     , d_covariance( initData(&d_covariance, "covariance", "actual co-variance  of reduced state (parameters) estimated by the filter" ) )
@@ -206,23 +207,23 @@ void UKFilterClassic<FilterType>::computeCorrection()
         helper::WriteAccessor<Data <helper::vector<FilterType> > > covar = d_covariance;
         helper::WriteAccessor<Data <helper::vector<FilterType> > > innov = d_innovation;
 
-        stat.resize(stateSize);
-        var.resize(stateSize);
+        //stat.resize(stateSize);
+        //var.resize(stateSize);
         size_t numCovariances = (stateSize*(stateSize-1))/2;
-        covar.resize(numCovariances);
-        innov.resize(observationSize);
+        //covar.resize(numCovariances);
+        //innov.resize(observationSize);
 
         size_t gli = 0;
-        for (size_t i = 0; i < stateSize; i++) {
-            stat[i] = stateExp[i];
-            var[i] = stateCovar(i,i);
-            for (size_t j = i+1; j < stateSize; j++) {
-                covar[gli++] = stateCovar(i,j);
-            }
-        }
-        for (size_t index = 0; index < observationSize; index++) {
-            innov[index] = innovation[index];
-        }
+        //for (size_t i = 0; i < stateSize; i++) {
+        //    stat[i] = stateExp[i];
+        //    var[i] = stateCovar(i,i);
+            //for (size_t j = i+1; j < stateSize; j++) {
+            //    covar[gli++] = stateCovar(i,j);
+            //}
+        //}
+        //for (size_t index = 0; index < observationSize; index++) {
+        //    innov[index] = innovation[index];
+        //}
 
         //char nstepc[100];
         //sprintf(nstepc, "%04lu", stepNumber);
@@ -233,10 +234,10 @@ void UKFilterClassic<FilterType>::computeCorrection()
         //    ofs << stateCovar << std::endl;
         //}
 
-        writeValidationPlot(d_filenameInn.getValue(),innovation);
+        writeEstimationData(d_filenameState.getValue(), stateExp);
+        writeEstimationData(d_filenameVar.getValue(), diagStateCov);
+        writeEstimationData(d_filenameInn.getValue(), innovation);
     }
-    writeValidationPlot(d_filenameCov.getValue(), diagStateCov);
-    writeValidationPlot(d_filenameFinalState.getValue(), stateExp);
 }
 
 
@@ -286,8 +287,15 @@ void UKFilterClassic<FilterType>::init() {
     PRNS("export prefix: " << exportPrefix)
 
     this->saveParam = false;
-    if (!d_filenameCov.getValue().empty()) {
-        std::ofstream paramFile(d_filenameCov.getValue().c_str());
+    if (!d_filenameState.getValue().empty()) {
+        std::ofstream paramFileState(d_filenameState.getValue().c_str());
+        if (paramFileState .is_open()) {
+            this->saveParam = true;
+            paramFileState.close();
+        }
+    }
+    if (!d_filenameVar.getValue().empty()) {
+        std::ofstream paramFile(d_filenameVar.getValue().c_str());
         if (paramFile.is_open()) {
             this->saveParam = true;
             paramFile.close();
@@ -298,13 +306,6 @@ void UKFilterClassic<FilterType>::init() {
         if (paramFileInn .is_open()) {
             this->saveParam = true;
             paramFileInn.close();
-        }
-    }
-    if (!d_filenameFinalState.getValue().empty()) {
-        std::ofstream paramFileFinalState(d_filenameFinalState.getValue().c_str());
-        if (paramFileFinalState .is_open()) {
-            this->saveParam = true;
-            paramFileFinalState.close();
         }
     }
 }
@@ -472,12 +473,12 @@ void UKFilterClassic<FilterType>::sqrtMat(EMatrixX& A, EMatrixX& sqrtA){
 
 
 template <class FilterType>
-void UKFilterClassic<FilterType>::writeValidationPlot (std::string filename ,EVectorX& state ){
+void UKFilterClassic<FilterType>::writeEstimationData(std::string filename, EVectorX& data){
     if (this->saveParam) {
+        Eigen::IOFormat CommaInitFmt(Eigen::StreamPrecision, Eigen::DontAlignCols, " ", " ");
         std::ofstream paramFile(filename.c_str(), std::ios::app);
         if (paramFile.is_open()) {
-            paramFile << state.transpose() << "";
-            paramFile << '\n';
+            paramFile << std::setprecision(15) << data.transpose().format(CommaInitFmt) << "\n";
             paramFile.close();
         }
     }

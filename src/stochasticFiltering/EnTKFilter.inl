@@ -25,6 +25,8 @@
 #include <iostream>
 #include <fstream>
 #include <random>
+#include <Eigen/src/Core/IO.h>
+
 
 
 namespace sofa
@@ -43,6 +45,9 @@ EnTKFilter<FilterType>::EnTKFilter()
     , d_ensembleMembersNumber(initData(&d_ensembleMembersNumber, "ensembleMembersNumber", "number of ensemble memebrs for localized ensemble filter" ) )
     , d_additiveNoiseType( initData(&d_additiveNoiseType, size_t(0), "additiveNoiseType", "add noise for ensemble members: 0 - no noise, 1 - after prediction, 2 -- after correction" ) )
     , d_inverseOptionType( initData(&d_inverseOptionType, "inverseOption", "inverse option type") )
+    , d_filenameState( initData(&d_filenameState, "filenameState", "output file name"))
+    , d_filenameVar( initData(&d_filenameVar, "filenameVar", "output file name"))
+    , d_filenameInn( initData(&d_filenameInn, "filenameInn", "output file name"))
     , d_state( initData(&d_state, "state", "actual expected value of reduced state (parameters) estimated by the filter" ) )
     , d_variance( initData(&d_variance, "variance", "actual variance  of reduced state (parameters) estimated by the filter" ) )
     , d_covariance( initData(&d_covariance, "covariance", "actual co-variance  of reduced state (parameters) estimated by the filter" ) )
@@ -88,7 +93,7 @@ void EnTKFilter<FilterType>::computePrediction()
         for (size_t index = 0; index < ensembleMembersNum; index++) {
             matXi.col(index) = matXi.col(index) + modelNoise;
         }
-        //std::cout << "We are in prediction" << std::endl;
+        std::cout << "We are in prediction" << std::endl;
     }
 
     /// Compute Predicted Mean
@@ -104,6 +109,13 @@ void EnTKFilter<FilterType>::computePrediction()
     stateCovar = matXiPerturb * matXiPerturb.transpose() / Type(ensembleMembersNum - 1);
     for (size_t index = 0; index < (size_t)stateCovar.rows(); index++) {
         diagStateCov(index) = stateCovar(index, index);
+    }
+
+    if (d_additiveNoiseType.getValue() == 3) {
+        for (size_t index = 0; index < ensembleMembersNum; index++) {
+            matXiPerturb.col(index) = matXiPerturb.col(index) + modelNoise;
+        }
+        std::cout << "We are in prediction difference" << std::endl;
     }
 
     masterStateWrapper->setState(stateExp, mechParams);
@@ -199,7 +211,7 @@ void EnTKFilter<FilterType>::computeCorrection()
             for (size_t index = 0; index < ensembleMembersNum; index++) {
                 matXi.col(index) = matXi.col(index) + modelNoise;
             }
-            //std::cout << "We are in correction" << std::endl;
+            std::cout << "We are in correction" << std::endl;
         }
 
         masterStateWrapper->setState(stateExp, mechParams);
@@ -207,25 +219,29 @@ void EnTKFilter<FilterType>::computeCorrection()
         /// Write Some Data for Validation
         helper::WriteAccessor<Data <helper::vector<FilterType> > > stat = d_state;
         helper::WriteAccessor<Data <helper::vector<FilterType> > > var = d_variance;
-        helper::WriteAccessor<Data <helper::vector<FilterType> > > covar = d_covariance;
+        //helper::WriteAccessor<Data <helper::vector<FilterType> > > covar = d_covariance;
         helper::WriteAccessor<Data <helper::vector<FilterType> > > innov = d_innovation;
 
-        stat.resize(stateSize);
-        var.resize(stateSize);
+        //stat.resize(stateSize);
+        //var.resize(stateSize);
         size_t numCovariances = (stateSize*(stateSize-1))/2;
-        covar.resize(numCovariances);
-        innov.resize(observationSize);
+        //covar.resize(numCovariances);
+        //innov.resize(observationSize);
 
-        size_t gli = 0;
-        for (size_t index = 0; index < stateSize; index++) {
-            stat[index] = stateExp[index];
-            var[index] = stateCovar(index, index);
-            for (size_t j = index + 1; j < stateSize; j++) {
-                covar[gli++] = stateCovar(index, j);
-            }
-        }
-        for (size_t index = 0; index < observationSize; index++) {
-            innov[index] = innovation[index];
+        //size_t gli = 0;
+        //for (size_t index = 0; index < stateSize; index++) {
+        //    stat[index] = stateExp[index];
+        //    var[index] = stateCovar(index, index);
+            //for (size_t j = index + 1; j < stateSize; j++) {
+            //    covar[gli++] = stateCovar(index, j);
+            //}
+        //}
+        //for (size_t index = 0; index < observationSize; index++) {
+        //    innov[index] = innovation[index];
+        //}
+
+        for (size_t i = 0; i < (size_t)stateCovar.rows(); i++) {
+            diagStateCov(i) = stateCovar(i,i);
         }
 
         //char nstepc[100];
@@ -236,6 +252,10 @@ void EnTKFilter<FilterType>::computeCorrection()
         //    ofs.open(fileName.c_str(), std::ofstream::out);
         //    ofs << stateCovar << std::endl;
         //}
+
+        writeEstimationData(d_filenameState.getValue(), stateExp);
+        writeEstimationData(d_filenameVar.getValue(), diagStateCov);
+        writeEstimationData(d_filenameInn.getValue(), innovation);
     }
 }
 
@@ -280,6 +300,29 @@ void EnTKFilter<FilterType>::init() {
         PRNS("found observation manager: " << observationManager->getName());
     } else
         PRNE("no observation manager found!");
+
+    this->saveParam = false;
+    if (!d_filenameState.getValue().empty()) {
+        std::ofstream paramFileState(d_filenameState.getValue().c_str());
+        if (paramFileState .is_open()) {
+            this->saveParam = true;
+            paramFileState.close();
+        }
+    }
+    if (!d_filenameVar.getValue().empty()) {
+        std::ofstream paramFile(d_filenameVar.getValue().c_str());
+        if (paramFile.is_open()) {
+            this->saveParam = true;
+            paramFile.close();
+        }
+    }
+    if (!d_filenameInn.getValue().empty()) {
+        std::ofstream paramFileInn(d_filenameInn.getValue().c_str());
+        if (paramFileInn .is_open()) {
+            this->saveParam = true;
+            paramFileInn.close();
+        }
+    }
 }
 
 
@@ -445,13 +488,15 @@ void EnTKFilter<FilterType>::sqrtMat(EMatrixX& A, EMatrixX& sqrtA){
 
 }
 
+
+
 template <class FilterType>
-void EnTKFilter<FilterType>::writeValidationPlot (std::string filename ,EVectorX& state ){
+void EnTKFilter<FilterType>::writeEstimationData(std::string filename, EVectorX& data){
     if (this->saveParam) {
+        Eigen::IOFormat CommaInitFmt(Eigen::StreamPrecision, Eigen::DontAlignCols, " ", " ");
         std::ofstream paramFile(filename.c_str(), std::ios::app);
         if (paramFile.is_open()) {
-            paramFile << state.transpose() << "";
-            paramFile << '\n';
+            paramFile << std::setprecision(15) << data.transpose().format(CommaInitFmt) << "\n";
             paramFile.close();
         }
     }

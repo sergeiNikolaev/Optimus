@@ -40,9 +40,8 @@
 #include <Eigen/Dense>
 #include <iostream>
 #include <fstream>
+#include <iomanip>
 //#include <Accelerate/Accelerate.h>
-#include <fstream>
-#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -120,6 +119,8 @@ protected:
     EMatrixX stateAnalysisCovar, matI;
     EMatrixX matXi, matZmodel, matXiPerturb;
 
+    std::string filenameState, filenameVar, filenameInn;
+    Data< std::string > d_filenameState, d_filenameVar, d_filenameInn;
     bool saveParam;
 
     /// structures for parallel computing:
@@ -151,6 +152,8 @@ public:
     void pseudoInverse(EMatrixX& M,EMatrixX& pinvM );
     void writeValidationPlot(std::string filename ,EVectorX& state );
     void sqrtMat(EMatrixX& A, EMatrixX& sqrtA);
+
+    void writeEstimationData(std::string filename, EVectorX& data);
 
     virtual void computePerturbedStates();
 
