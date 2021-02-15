@@ -1055,6 +1055,88 @@ typename StochasticStateWrapper<DataTypes, FilterType>::EMatrixX& StochasticStat
 
 }
 
+template <class DataTypes, class FilterType>
+typename StochasticStateWrapper<DataTypes, FilterType>::EVectorX& StochasticStateWrapper<DataTypes, FilterType>::getModelElementNoise() {
+    if (this->modelElementNoise.size() == 0) {
+        helper::vector<FilterType> velModStDev, posModStDev;
+
+        if (estimatePosition.getValue()) {
+            posModStDev.resize(posDim);
+            for (size_t i=0 ;i<posDim;i++) {
+                if (posModelStdev.getValue().size() != posDim) {
+                    posModStDev[i]=posModelStdev.getValue()[0];
+                }else{
+                    posModStDev[i]=posModelStdev.getValue()[i];
+                }
+            }
+        }
+
+
+        if (estimateVelocity.getValue()) {
+            velModStDev.resize(velDim);
+            for (size_t i=0 ;i<velDim;i++) {
+                if (velModelStdev.getValue().size() != velDim) {
+                    velModStDev[i]=velModelStdev.getValue()[0];
+                }else{
+                    velModStDev[i]=velModelStdev.getValue()[i];
+                }
+            }
+        }
+
+        helper::vector<FilterType> paramModelStDev = paramModelStdev.getValue();
+        this->modelElementNoise = EVectorX::Zero(this->stateSize);
+
+        size_t kp= 0;
+        size_t kv= 0;
+        size_t k= 0;
+        const size_t N =freeNodes.size();
+        const size_t M =posDim;
+        const size_t V =velDim;
+
+        EVectorX vecPosModelStDev;
+        if (estimatePosition.getValue()) {
+            vecPosModelStDev.resize(N*M);
+            for (size_t i = 0; i < N; i++ ){
+                for (size_t j = 0; j < M; j ++)
+                    vecPosModelStDev(i*M+j) = posModStDev[j%M];
+            }
+        }
+
+        EVectorX vecVelModelStDev;
+        if (estimateVelocity.getValue()) {
+            vecVelModelStDev.resize(N*V);
+            for (size_t i = 0; i < N; i++){
+                for (size_t j = 0; j < V; j ++)
+                    vecVelModelStDev(i*V+j) = velModStDev[j%V];
+            }
+        }
+
+        if (estimatePosition.getValue() && estimateVelocity.getValue()){
+            for (unsigned index = 0; index < this->positionVariance.size(); index++, kp++)
+                this->modelElementNoise(index) = vecPosModelStDev(kp)  ;
+            for (size_t index = this->positionVariance.size(); index < this->reducedStateIndex; index++,kv++)
+                this->modelElementNoise(index) = vecVelModelStDev[kv]  ;
+            for (size_t pi = this->reducedStateIndex; pi < this->stateSize; pi++,k++)
+                if (paramModelStdev.isSet() == 0){
+                    this->modelElementNoise(pi) = 0;
+                } else {
+                    this->modelElementNoise(pi) = paramModelStDev[k] * paramModelStDev[k];    /// Non-null Q for Force
+                }
+        }
+
+        //NORMALLY IS THE CASE OF DATA ASSIMILATION where Parameters have no Q
+        if (estimatePosition.getValue() && !estimateVelocity.getValue()){
+            for (unsigned index = 0; index < this->positionVariance.size(); index++, kp++)
+                this->modelElementNoise(index) = vecPosModelStDev(kp);
+            for (size_t pi = this->reducedStateIndex; pi < this->stateSize; pi++,k++)
+                this->modelElementNoise(pi) = 0;
+        }
+
+    }
+    return this->modelElementNoise;
+
+}
+
 
 template <class DataTypes, class FilterType>
 void StochasticStateWrapper<DataTypes, FilterType>::updateModelErrorVariance() {
@@ -1265,20 +1347,20 @@ void StochasticStateWrapper<DataTypes, FilterType>::draw(const core::visual::Vis
                     points[j][2]=pts[j][2];
                 }
 
-                Vec4f color;
+                helper::types::RGBAColor color;
 
                 switch (i) {
-                case 0: color = Vec4f(1.0,0.0,0.0,1.0); break;
-                case 1: color = Vec4f(0.0,1.0,0.0,1.0); break;
-                case 2: color = Vec4f(0.0,0.0,1.0,1.0); break;
-                default: color = Vec4f(0.5, 0.5, 0.5, 0.5);
+                case 0: color = helper::types::RGBAColor(1.0,0.0,0.0,1.0); break;
+                case 1: color = helper::types::RGBAColor(0.0,1.0,0.0,1.0); break;
+                case 2: color = helper::types::RGBAColor(0.0,0.0,1.0,1.0); break;
+                default: color = helper::types::RGBAColor(0.5, 0.5, 0.5, 0.5);
                 }
 
                 vparams->drawTool()->setPolygonMode(0,vparams->displayFlags().getShowWireFrame());
                 vparams->drawTool()->setLightingEnabled(true); //Enable lightning
                 vparams->drawTool()->drawSpheres(points, d_radius_draw.getValue(), color); // sofa::defaulttype::Vec<4, float>(color[i],0.8f,colorB[i],1.0f));
                 vparams->drawTool()->setPolygonMode(0,false);
-                vparams->drawTool()->drawLineStrip(points,3.0,sofa::defaulttype::Vec<4, float>(color[i],0.8f,colorB[i],1.0f));
+                vparams->drawTool()->drawLineStrip(points, 3.0, helper::types::RGBAColor(color[i],0.8f,colorB[i],1.0f));
 
             }
         }

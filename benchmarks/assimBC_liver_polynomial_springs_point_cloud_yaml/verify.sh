@@ -1,9 +1,11 @@
 #!/bin/bash
 
-if [ $# == "1" ]; then
-        SOFA_EXEC="$1 -l /home/sergei/Optimus_test/sofa/build_release/lib/libSofaPython.so -l /home/sergei/Optimus_test/sofa/build_release/lib/libSofaExporter.so"
+if [ $# == "2" ]; then
+        SOFA_EXEC="$1 -l $2/libSofaPython3.so"
+elif [ $# == "1" ]; then
+        SOFA_EXEC="$1 -l libSofaPython3.so"
 else
-        SOFA_EXEC="runSofa -l /home/sergei/Optimus_test/sofa/build_release/lib/libSofaPython.so -l /home/sergei/Optimus_test/sofa/build_release/lib/libSofaExporter.so"
+        SOFA_EXEC="runSofa -l libSofaPython3.so"
 fi
 echo "Using SOFA executable: " $SOFA_EXEC
 
