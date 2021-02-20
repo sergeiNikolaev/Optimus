@@ -25,11 +25,11 @@ rm -rf roukf_testing
 mkdir -p roukf_testing
 
 echo "Generating observations..."
-$SOFA_EXEC -g batch -n $numItObs $goScene &> genObsOut
+$SOFA_EXEC -g batch -n $numItObs $goScene 2>&1
 echo "... done"
 
 echo "Running data assimilation..."
-$SOFA_EXEC -g batch -n $numItSDA $sdaScene &> sdaOut
+$SOFA_EXEC -g batch -n $numItSDA $sdaScene 2>&1
 echo "... done"
 
 echo "Comparing state w.r.t. benchmark:"
