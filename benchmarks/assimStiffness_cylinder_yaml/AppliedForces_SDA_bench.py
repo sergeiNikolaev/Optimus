@@ -135,7 +135,7 @@ class AppliedForcesSDA_Controller(Sofa.Core.Controller):
             modelNode.addObject('DefaultContactManager', name="Response", response="FrictionContact", responseParams='mu=0')
 
         ### general node
-        simuNode=modelNode.addChild('cylinder')
+        simuNode = modelNode.addChild('cylinder')
 
         ### solvers
         intType = self.opt['model']['int']['type']
@@ -153,6 +153,8 @@ class AppliedForcesSDA_Controller(Sofa.Core.Controller):
 
         if intLinearType == 'Pardiso':
             simuNode.addObject('SparsePARDISOSolver', name='lsolver', verbose='0', pardisoSchurComplement=self.planeCollision, symmetric=self.opt['model']['linsol']['pardisoSym'], exportDataToFolder=self.opt['model']['linsol']['pardisoFolder'])
+        elif intLinearType == 'LDL':
+            simuNode.addObject('SparseLDLSolver', printLog="0")
         elif intLinearType == 'CG':
             simuNode.addObject('CGLinearSolver', name='lsolverit', tolerance='1e-10', threshold='1e-10', iterations='500', verbose='0')
             if self.opt['model']['linsol']['usePCG']:
