@@ -15,6 +15,7 @@ def createScene(rootNode):
     rootNode.addObject('RequiredPlugin', name='Deformable', pluginName='SofaDeformable')
     rootNode.addObject('RequiredPlugin', name='Engine', pluginName='SofaEngine')
     rootNode.addObject('RequiredPlugin', name='ImplicitOdeSolver', pluginName='SofaImplicitOdeSolver')
+    rootNode.addObject('RequiredPlugin', name='SparseSolver', pluginName='SofaSparseSolver')
     rootNode.addObject('RequiredPlugin', name='Loader', pluginName='SofaLoader')
     rootNode.addObject('RequiredPlugin', name='MiscForceField', pluginName='SofaMiscForceField')
     rootNode.addObject('RequiredPlugin', name='Rigid', pluginName='SofaRigid')

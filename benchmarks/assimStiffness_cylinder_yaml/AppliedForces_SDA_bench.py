@@ -13,6 +13,7 @@ def createScene(rootNode):
     rootNode.addObject('RequiredPlugin', name='Engine', pluginName='SofaEngine')
     rootNode.addObject('RequiredPlugin', name='GeneralEngine', pluginName='SofaGeneralEngine')
     rootNode.addObject('RequiredPlugin', name='ImplicitOdeSolver', pluginName='SofaImplicitOdeSolver')
+    rootNode.addObject('RequiredPlugin', name='SparseSolver', pluginName='SofaSparseSolver')
     rootNode.addObject('RequiredPlugin', name='BoundaryCondition', pluginName='SofaBoundaryCondition')
     rootNode.addObject('RequiredPlugin', name='SLoader', pluginName='SofaLoader')
     rootNode.addObject('RequiredPlugin', name='SimpleFem', pluginName='SofaSimpleFem')
