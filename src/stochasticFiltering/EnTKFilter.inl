@@ -217,46 +217,49 @@ void EnTKFilter<FilterType>::computeCorrection()
         masterStateWrapper->setState(stateExp, mechParams);
 
         /// Write Some Data for Validation
-        helper::WriteAccessor<Data <helper::vector<FilterType> > > stat = d_state;
-        helper::WriteAccessor<Data <helper::vector<FilterType> > > var = d_variance;
-        //helper::WriteAccessor<Data <helper::vector<FilterType> > > covar = d_covariance;
         helper::WriteAccessor<Data <helper::vector<FilterType> > > innov = d_innovation;
-
-        //stat.resize(stateSize);
-        //var.resize(stateSize);
-        size_t numCovariances = (stateSize*(stateSize-1))/2;
-        //covar.resize(numCovariances);
-        //innov.resize(observationSize);
-
-        //size_t gli = 0;
-        //for (size_t index = 0; index < stateSize; index++) {
-        //    stat[index] = stateExp[index];
-        //    var[index] = stateCovar(index, index);
-            //for (size_t j = index + 1; j < stateSize; j++) {
-            //    covar[gli++] = stateCovar(index, j);
-            //}
-        //}
         //for (size_t index = 0; index < observationSize; index++) {
         //    innov[index] = innovation[index];
         //}
-
-        for (size_t i = 0; i < (size_t)stateCovar.rows(); i++) {
-            diagStateCov(i) = stateCovar(i,i);
-        }
-
-        //char nstepc[100];
-        //sprintf(nstepc, "%04lu", stepNumber);
-        //if (! exportPrefix.empty()) {
-        //    std::string fileName = exportPrefix + "/covar_" + nstepc + ".txt";
-        //    std::ofstream ofs;
-        //    ofs.open(fileName.c_str(), std::ofstream::out);
-        //    ofs << stateCovar << std::endl;
-        //}
-
-        writeEstimationData(d_filenameState.getValue(), stateExp);
-        writeEstimationData(d_filenameVar.getValue(), diagStateCov);
         writeEstimationData(d_filenameInn.getValue(), innovation);
     }
+
+    /// Write Some Data for Validation
+    helper::WriteAccessor<Data <helper::vector<FilterType> > > stat = d_state;
+    helper::WriteAccessor<Data <helper::vector<FilterType> > > var = d_variance;
+    //helper::WriteAccessor<Data <helper::vector<FilterType> > > covar = d_covariance;
+
+
+    //stat.resize(stateSize);
+    //var.resize(stateSize);
+    size_t numCovariances = (stateSize*(stateSize-1))/2;
+    //covar.resize(numCovariances);
+    //innov.resize(observationSize);
+
+    //size_t gli = 0;
+    //for (size_t index = 0; index < stateSize; index++) {
+    //    stat[index] = stateExp[index];
+    //    var[index] = stateCovar(index, index);
+        //for (size_t j = index + 1; j < stateSize; j++) {
+        //    covar[gli++] = stateCovar(index, j);
+        //}
+    //}
+
+    for (size_t i = 0; i < (size_t)stateCovar.rows(); i++) {
+        diagStateCov(i) = stateCovar(i,i);
+    }
+
+    //char nstepc[100];
+    //sprintf(nstepc, "%04lu", stepNumber);
+    //if (! exportPrefix.empty()) {
+    //    std::string fileName = exportPrefix + "/covar_" + nstepc + ".txt";
+    //    std::ofstream ofs;
+    //    ofs.open(fileName.c_str(), std::ofstream::out);
+    //    ofs << stateCovar << std::endl;
+    //}
+
+    writeEstimationData(d_filenameState.getValue(), stateExp);
+    writeEstimationData(d_filenameVar.getValue(), diagStateCov);
 }
 
 

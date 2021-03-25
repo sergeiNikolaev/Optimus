@@ -63,8 +63,10 @@ SimulatedStateObservationSource<DataTypes>::SimulatedStateObservationSource()
     , d_controllerMode( initData(&d_controllerMode, false,"controllerMode","if true, sets the mechanical object in begin animation step") )
     , d_trackedObservations( initData (&d_trackedObservations, "trackedObservations", "tracked observations: temporary solution!!!") )
     , d_asynObs(initData(&d_asynObs, false, "asynObs","Asynchronous or Missing Observations"))
+    , d_blindZones(initData(&d_blindZones, "blindZones","time zones without observations"))
 {
     m_exportIndices = false;
+    m_blindZoneIndex = 0;
 }
 
 template<class DataTypes>
@@ -486,6 +488,18 @@ bool SimulatedStateObservationSource<DataTypes>::getObservation(double _time, Ve
 template<class DataTypes>
 bool SimulatedStateObservationSource<DataTypes>::getObservation(double _time, VecCoord& _observation, VecIndex& _index)
 {
+    if(d_blindZones.getValue().size() > m_blindZoneIndex) {
+        const helper::vector<defaulttype::Vec<2,Real>>& zones = d_blindZones.getValue();
+        defaulttype::Vec<2,Real> currentBlindZone = zones[m_blindZoneIndex];
+        if (_time > currentBlindZone[1]) {
+            // next blind zone
+            m_blindZoneIndex++;
+        } else if (_time > currentBlindZone[0] && _time < currentBlindZone[1]) {
+            std::cout << "We are in blind zone for time " << _time << " Computing Only Prediction " << std::endl;
+            return false;
+        }
+    }
+
     if (d_asynObs.getValue())
     {
         helper::ReadAccessor<Data<VecCoord> > tracObs = d_trackedObservations;
@@ -556,6 +570,11 @@ template<class DataTypes>
 bool SimulatedStateObservationSource<DataTypes>::getCorrespondentIndices(double _time, VecIndex &_index)
 {
     size_t ix = (fabs(m_dt) < 1e-10) ? 0 : size_t(round(_time/m_dt));
+    if (ix >= size_t(m_correspondentIndices.size()))
+    {
+        //PRNE("No observation for time " << _time << " , using the last one from " << m_positions.size()-1);
+        ix = m_correspondentIndices.size() - 1;
+    }
     if (m_correspondentIndices[ix].size() == 0)
         return false;
     _index = m_correspondentIndices[ix];

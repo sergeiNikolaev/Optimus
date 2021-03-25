@@ -368,6 +368,8 @@ void ROUKFilter<FilterType>::computeSimplexCorrection()
         return;
     }
 
+    EVectorX state = masterStateWrapper->getState();
+
     if (observationManager->hasObservation(this->actualTime)) {
         //TIC
         EVectorX vecXCol;
@@ -429,7 +431,6 @@ void ROUKFilter<FilterType>::computeSimplexCorrection()
         //std::cout << "\n vecZ \n " << vecZ << std::endl;
         //PRNS("\n vecZ \n " << vecZ);
 
-        EVectorX state = masterStateWrapper->getState();
         //std::cout << "state\n " << state.transpose() << std::endl;
         //PRNS("state\n " << state.transpose());
         EMatrixX errorVarProj = masterStateWrapper->getStateErrorVarianceProjector();
@@ -542,13 +543,13 @@ void ROUKFilter<FilterType>::computeSimplexCorrection()
         asumEVec("############# final state", state);
         std::cout << "Max = " << maxState << " min = " << minState << std::endl;*/
 
-        writeEstimationData(d_filenameState.getValue(), state);
         writeEstimationData(d_filenameVar.getValue(), diagStateCov);
         writeEstimationData(d_filenameInn.getValue(), vecZ);
     }
 
-    sofa::helper::AdvancedTimer::stepEnd("ROUKFSimplexCorrection");
+    writeEstimationData(d_filenameState.getValue(), state);
 
+    sofa::helper::AdvancedTimer::stepEnd("ROUKFSimplexCorrection");
 }
 
 template <class FilterType>
@@ -561,6 +562,9 @@ void ROUKFilter<FilterType>::computeStarCorrection()
         PRNE("Version for non-constant alpha not implemented!");
         return;
     }
+
+    // Update state
+    EVectorX state = masterStateWrapper->getState();
 
     if (observationManager->hasObservation(this->actualTime)) {
         //TIC
@@ -681,9 +685,6 @@ void ROUKFilter<FilterType>::computeStarCorrection()
 
         //std::cout << "K: \n" << K << std::endl;
 
-        // Update state
-        EVectorX state = masterStateWrapper->getState();
-
         //PRNS("state\n " << state.transpose());
         //std::cout << "state: \n" << state.transpose() << std::endl;
 
@@ -761,10 +762,11 @@ void ROUKFilter<FilterType>::computeStarCorrection()
         //asumEVec("############# final state", state);
         //std::cout << "Max = " << maxState << " min = " << minState << std::endl;
 
-        writeEstimationData(d_filenameState.getValue(), state);
         writeEstimationData(d_filenameVar.getValue(), diagStateCov);
         writeEstimationData(d_filenameInn.getValue(), vecZ);
     }
+
+    writeEstimationData(d_filenameState.getValue(), state);
 
     sofa::helper::AdvancedTimer::stepEnd("ROUKFStarCorrection");
 }

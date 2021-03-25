@@ -83,6 +83,7 @@ protected:
     CorrespondenceTable m_correspondentTable;
 
     unsigned int m_nParticles, m_nObservations, m_dim;
+    unsigned int m_blindZoneIndex;
     double m_initTime, m_finalTime;
     double m_dt;
 
@@ -102,6 +103,7 @@ public:
     Data<bool> d_controllerMode;
     Data<VecCoord> d_trackedObservations;
     Data< bool  > d_asynObs;
+    Data<helper::vector<defaulttype::Vec<2,Real>>> d_blindZones;
 
 
     /// maps:  time + vector
